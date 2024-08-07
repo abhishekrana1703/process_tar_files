@@ -39,6 +39,7 @@ jobs:
 
       - name: Process Tar Files
         run: |
+          pwd
           #!/bin/bash
 
           # Function to truncate username and url fields in users_000001.json file
