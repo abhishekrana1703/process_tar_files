@@ -3,7 +3,7 @@ name: Process Zip Files
 on:
   push:
     branches:
-      - main  # Trigger the workflow on pushes to the main branch
+      - main  # Adjust this to the branch you want to trigger the workflow
 
 jobs:
   process:
@@ -13,17 +13,29 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      - name: Set up JQ and Utilities
+        run: sudo apt-get install -y jq unzip zip
+
       - name: Create input-files Directory
         run: mkdir -p input-files
 
       - name: Move Zip Files to input-files Directory
         run: |
-          if [ -f '*.zip' ]; then
+          # List zip files before moving
+          echo "Listing zip files in root directory:"
+          ls *.zip || echo "No zip files found in root directory."
+          
+          # Move zip files to the input-files directory
+          if ls *.zip 1> /dev/null 2>&1; then
             mv *.zip input-files/
+          else
+            echo "No zip files found to move."
           fi
 
-      - name: Set up JQ
-        run: sudo apt-get install jq
+      - name: List Files in input-files Directory
+        run: |
+          echo "Listing files in input-files directory:"
+          ls input-files/
 
       - name: Process Zip Files
         run: |
@@ -50,7 +62,11 @@ jobs:
           }
 
           # Navigate to the directory with zip files
-          cd input-files
+          cd input-files || { echo "Directory input-files does not exist!"; exit 1; }
+
+          # List zip files in the input-files directory
+          echo "Listing zip files in input-files directory:"
+          ls *.zip || { echo "No zip files found in input-files directory."; exit 1; }
 
           # Process each zip file
           for zip_file in *.zip; do
