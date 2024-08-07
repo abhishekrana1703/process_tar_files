@@ -24,7 +24,7 @@ jobs:
       - name: List Processed Files
         run: |
           echo "Listing files in the root directory:"
-          ls -l
+          ls -l *.tar.gz
       - name: Upload Processed Files
         uses: actions/upload-artifact@v3
         with:
