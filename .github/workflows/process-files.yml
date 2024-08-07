@@ -21,8 +21,3 @@ jobs:
           chmod +x process_tar_files.sh
           ./process_tar_files.sh
 
-      - name: Upload Processed Files
-        uses: actions/upload-artifact@v3
-        with:
-          name: processed-tar-files
-          path: *.tar.gz
