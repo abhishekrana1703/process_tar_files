@@ -1,4 +1,4 @@
-name: Process Zip Files
+name: Process Tar Files
 
 on:
   push:
@@ -14,30 +14,30 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set up JQ and Utilities
-        run: sudo apt-get install -y jq unzip zip
+        run: sudo apt-get install -y jq tar gzip
 
-      - name: Create input-files Directory
-        run: mkdir -p input-files
+      - name: Create tar-files Directory
+        run: mkdir -p tar-files
 
-      - name: Move Zip Files to input-files Directory
+      - name: Move Tar Files to tar-files Directory
         run: |
-          # List zip files before moving
-          echo "Listing zip files in root directory:"
-          ls *.zip || echo "No zip files found in root directory."
+          # List tar.gz files before moving
+          echo "Listing tar.gz files in root directory:"
+          ls *.tar.gz || echo "No tar.gz files found in root directory."
           
-          # Move zip files to the input-files directory
-          if ls *.zip 1> /dev/null 2>&1; then
-            mv *.zip input-files/
+          # Move tar.gz files to the tar-files directory if they exist
+          if ls *.tar.gz 1> /dev/null 2>&1; then
+            mv *.tar.gz tar-files/
           else
-            echo "No zip files found to move."
+            echo "No tar.gz files found to move."
           fi
 
-      - name: List Files in input-files Directory
+      - name: List Files in tar-files Directory
         run: |
-          echo "Listing files in input-files directory:"
-          ls input-files/
+          echo "Listing files in tar-files directory:"
+          ls tar-files/
 
-      - name: Process Zip Files
+      - name: Process Tar Files
         run: |
           #!/bin/bash
 
@@ -61,25 +61,25 @@ jobs:
               jq '.' "$file_path"
           }
 
-          # Navigate to the directory with zip files
-          cd input-files || { echo "Directory input-files does not exist!"; exit 1; }
+          # Navigate to the directory with tar.gz files
+          cd tar-files || { echo "Directory tar-files does not exist!"; exit 1; }
 
-          # List zip files in the input-files directory
-          echo "Listing zip files in input-files directory:"
-          ls *.zip || { echo "No zip files found in input-files directory."; exit 1; }
+          # List tar.gz files in the tar-files directory
+          echo "Listing tar.gz files in tar-files directory:"
+          ls *.tar.gz || { echo "No tar.gz files found in tar-files directory."; exit 1; }
 
-          # Process each zip file
-          for zip_file in *.zip; do
+          # Process each tar.gz file
+          for tar_file in *.tar.gz; do
               # Extract the base name of the file (without extension)
-              base_name=$(basename "$zip_file" .zip)
+              base_name=$(basename "$tar_file" .tar.gz)
               
               # Create a directory with the base name
               mkdir -p "$base_name"
               
-              # Unzip the file into the created directory
-              unzip "$zip_file" -d "$base_name"
+              # Extract the tar.gz file into the created directory
+              tar -xzvf "$tar_file" -C "$base_name"
               
-              echo "Extracted $zip_file into $base_name/"
+              echo "Extracted $tar_file into $base_name/"
               
               # Change to the new directory
               cd "$base_name" || exit
@@ -95,9 +95,9 @@ jobs:
               # Go back to the original directory
               cd ..
               
-              # Create a zip archive of the directory
-              zip -r "${base_name}_processed.zip" "$base_name"
-              echo "Created archive: ${base_name}_processed.zip"
+              # Create a tar.gz archive of the directory
+              tar -czvf "${base_name}_processed.tar.gz" "$base_name"
+              echo "Created archive: ${base_name}_processed.tar.gz"
               
               # Remove the extracted directory if needed
               rm -rf "$base_name"
@@ -106,5 +106,5 @@ jobs:
       - name: Upload Processed Files
         uses: actions/upload-artifact@v3
         with:
-          name: processed-zip-files
-          path: input-files/*_processed.zip
+          name: processed-tar-files
+          path: tar-files/*_processed.tar.gz
