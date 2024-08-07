@@ -21,8 +21,13 @@ jobs:
           chmod +x process_tar_files.sh
           ./process_tar_files.sh
 
+      - name: List Processed Files
+        run: |
+          echo "Listing files in the root directory:"
+          ls -l
+
       - name: Upload Processed Files
         uses: actions/upload-artifact@v3
         with:
           name: processed-tar-files
-          path: tar-files/*_processed.tar.gz
+          path: *.tar.gz
