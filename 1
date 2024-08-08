@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# Step 1: Check if any ".tar.gz" file is available in the directory
+tar_file=$(ls *.tar.gz 2>/dev/null | head -n 1)
+
+if [ -z "$tar_file" ]; then
+    echo "No .tar.gz file found in the current directory."
+    exit 1
+fi
+
+# Step 2: Unzip the file into a new folder named after the file
+folder_name="${tar_file%.tar.gz}"
+mkdir -p "$folder_name"
+tar -xzf "$tar_file" -C "$folder_name"
+
+# Step 3: Go inside the folder where the file is unzipped
+cd "$folder_name" || exit 1
+
+# Step 4: Check if any users_00000.json is present
+if [ -f "users_00000.json" ]; then
+    # Step 5: Delete the users_00000.json file
+    rm "users_00000.json"
+fi
+
+# Define the source path of users_00000.json as a variable
+json_file_path="/home/ec2-user/files/users_00000.json"
+
+# Step 6: Copy the new users_00000.json from the specified path
+cp "$json_file_path" .
+
+
+# Step 7: Come out from the folder
+cd ..
+
+# Step 8: Make a new tar.gz file with folder name and timestamp
+timestamp=$(date +"%Y%m%d%H%M%S")
+new_tar_file="${folder_name}_${timestamp}.tar.gz"
+tar -czf "$new_tar_file" "$folder_name"
+
+# Step 9: Delete the folder
+rm -rf "$folder_name"
+
+echo "Process completed. New file: $new_tar_file"
