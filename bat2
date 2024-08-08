@@ -1,0 +1,40 @@
+@echo off
+setlocal
+
+:: Configuration
+set PEM_FILE=your-key.pem
+set EC2_USER=ec2-user
+set EC2_HOST=your-ec2-public-dns
+set REMOTE_DIR=/home/ec2-user/abhishek
+set SCRIPT_NAME=your-script.sh
+
+:: Path to store the downloaded file
+set LOCAL_DESTINATION=%CD%
+
+:: SSH into EC2 and execute the shell script
+echo Running shell script on EC2 instance...
+ssh -i "%PEM_FILE%" %EC2_USER%@%EC2_HOST% "cd %REMOTE_DIR% && ./%SCRIPT_NAME%"
+
+:: Wait for the shell script to complete
+echo Waiting for the script to complete...
+timeout /t 60 /nobreak >nul
+
+:: Find the latest .tar.gz file
+echo Finding the latest .tar.gz file...
+set LATEST_FILE=
+for /f "delims=" %%i in ('ssh -i "%PEM_FILE%" %EC2_USER%@%EC2_HOST% "cd %REMOTE_DIR% && ls -t *.tar.gz | head -n 1"') do set LATEST_FILE=%%i
+
+:: Check if file was found
+if "%LATEST_FILE%"=="" (
+    echo No .tar.gz file found.
+    exit /b 1
+)
+
+:: Copy the file from EC2 to local machine
+echo Copying the file from EC2 to local machine...
+scp -i "%PEM_FILE%" %EC2_USER%@%EC2_HOST%:%REMOTE_DIR%/%LATEST_FILE% %LOCAL_DESTINATION%
+
+echo File %LATEST_FILE% copied to %LOCAL_DESTINATION%
+
+endlocal
+pause
