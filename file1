@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Step 1: Run the gl-exporter Docker container
+echo "Running Docker container..."
+container_id=$(docker run -d github/gl-exporter /bin/bash)
+echo "Container ID: $container_id"
+
+# Step 2: Load environment variables from env.sh and create export.csv
+echo "Loading environment variables and creating export.csv..."
+if [ -f "env.sh" ]; then
+    source env.sh
+else
+    echo "env.sh file not found!"
+    exit 1
+fi
+
+# Check if required environment variables are set
+if [ -z "$GITLAB_API_ENDPOINT" ] || [ -z "$GITLAB_USERNAME" ] || [ -z "$GITLAB_API_PRIVATE_TOKEN" ]; then
+    echo "Required environment variables are missing!"
+    exit 1
+fi
+
+# Create export.csv file
+docker exec -it "$container_id" bash -c \
+    "export GITLAB_API_ENDPOINT='$GITLAB_API_ENDPOINT'; \
+    export GITLAB_USERNAME='$GITLAB_USERNAME'; \
+    export GITLAB_API_PRIVATE_TOKEN='$GITLAB_API_PRIVATE_TOKEN'; \
+    echo 'GroupOne,RepoOne' > export.csv; \
+    echo 'GroupOne,RepoTwo' >> export.csv; \
+    echo 'GroupTwo,RepoThree' >> export.csv"
+
+# Step 3: Run the gl_exporter command to export data
+echo "Running gl_exporter..."
+docker exec -it "$container_id" bash -c \
+    "export GITLAB_API_ENDPOINT='$GITLAB_API_ENDPOINT'; \
+    export GITLAB_USERNAME='$GITLAB_USERNAME'; \
+    export GITLAB_API_PRIVATE_TOKEN='$GITLAB_API_PRIVATE_TOKEN'; \
+    gl_exporter -f export.csv -o migration-archive.tar.gz"
+
+# Step 4: Copy the archive file from the Docker container to the host machine
+echo "Copying migration-archive.tar.gz from container to host..."
+docker cp "$container_id":/workspace/migration-archive.tar.gz .
+
+# Clean up
+echo "Stopping and removing Docker container..."
+docker stop "$container_id"
+docker rm "$container_id"
+echo "Docker container stopped and removed."
+
+# Step 5: Execute process.sh
+if [ -f "process.sh" ]; then
+    echo "Executing process.sh..."
+    chmod +x process.sh
+    ./process.sh
+else
+    echo "process.sh file not found!"
+    exit 1
+fi
+
+echo "Script completed. The migration archive file is available as migration-archive.tar.gz"
