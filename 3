@@ -7,4 +7,20 @@ docker run -dit --name my_gl_exporter -v /home/ec2-user/Repo-Migration_Automatio
 
 docker exec -it my_gl_exporter /bin/bash
 
+export GITLAB_API_ENDPOINT=/home/ec2-user/data/endpoint
+export GITLAB_USERNAME=your_username
+export GITLAB_API_PRIVATE_TOKEN=your_private_token
+
+
+echo "export GITLAB_API_ENDPOINT=/home/ec2-user/data/endpoint" >> ~/.bashrc
+echo "export GITLAB_USERNAME=your_username" >> ~/.bashrc
+echo "export GITLAB_API_PRIVATE_TOKEN=your_private_token" >> ~/.bashrc
+
+
+source ~/.bashrc
+
+echo $GITLAB_API_ENDPOINT
+echo $GITLAB_USERNAME
+echo $GITLAB_API_PRIVATE_TOKEN
+
 
