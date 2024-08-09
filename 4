@@ -1,11 +1,6 @@
 #!/bin/bash
 
-# Define constants
-JSON_FILE="users_000001.json"
-NEW_JSON_FILE_LOCATION="/home/ec2-user/json-file/users_000001.json" # Update this to the correct path of the new JSON file
-DEST_DIR="/home/ec2-user/Repo-Migration_Automation"
-
-# Search for the first .tar.gz file in the current directory
+# Check for any .tar.gz files in the current directory
 TAR_FILE=$(find . -maxdepth 1 -name "*.tar.gz" | head -n 1)
 
 # Check if a .tar.gz file was found
@@ -14,88 +9,88 @@ if [ -z "$TAR_FILE" ]; then
     exit 1
 fi
 
-# Extract the .tar.gz file
-tar -xzvf "$TAR_FILE"
+# Extract the filename without extension
+FILE_NAME=$(basename "$TAR_FILE" .tar.gz)
+
+# Create a directory with the name of the file (without extension)
+mkdir "$FILE_NAME"
 if [ $? -ne 0 ]; then
-    echo "Failed to extract $TAR_FILE."
+    echo "Failed to create directory $FILE_NAME."
     exit 1
 fi
 
-# Locate the extracted directory
-EXTRACTED_DIR=$(tar -tzf "$TAR_FILE" | head -1 | cut -f1 -d"/")
-
-# Check if the directory was extracted
-if [ ! -d "$EXTRACTED_DIR" ]; then
-    echo "Failed to locate the extracted directory."
+# Extract the .tar.gz file into the new directory
+tar -xzvf "$TAR_FILE" -C "$FILE_NAME"
+if [ $? -ne 0 ]; then
+    echo "Failed to extract $TAR_FILE into $FILE_NAME."
     exit 1
 fi
 
-# Check if the JSON file exists
-if [ -f "$EXTRACTED_DIR/$JSON_FILE" ]; then
-    echo "JSON file '$JSON_FILE' exists."
+# Go inside the directory
+cd "$FILE_NAME" || { echo "Failed to enter directory $FILE_NAME."; exit 1; }
+
+# Check if the users_000001.json file exists
+if [ -f "users_000001.json" ]; then
+    echo "JSON file 'users_000001.json' exists."
 
     # Remove the original JSON file
-    rm "$EXTRACTED_DIR/$JSON_FILE"
+    rm "users_000001.json"
     if [ $? -ne 0 ]; then
-        echo "Failed to remove $JSON_FILE."
+        echo "Failed to remove users_000001.json."
         exit 1
     fi
     echo "Original JSON file has been removed."
 
     # Copy the new JSON file from the specified location
-    cp "$NEW_JSON_FILE_LOCATION" "$EXTRACTED_DIR/"
+    cp /home/ec2-user/json-file/users_000001.json "users_000001.json"
     if [ $? -ne 0 ]; then
-        echo "Failed to copy new JSON file from '$NEW_JSON_FILE_LOCATION'."
+        echo "Failed to copy new JSON file."
         exit 1
     fi
-    echo "New JSON file has been copied from '$NEW_JSON_FILE_LOCATION' to '$EXTRACTED_DIR/'."
-
-    # Remove the original tar file
-    rm "$TAR_FILE"
-    if [ $? -ne 0 ]; then
-        echo "Failed to remove original tar file $TAR_FILE."
-        exit 1
-    fi
-
-    # Re-tar the directory into a new .tar.gz file
-    NEW_TAR_FILE="${TAR_FILE%.tar.gz}_updated.tar.gz"
-    tar -czvf "$NEW_TAR_FILE" -C "$EXTRACTED_DIR" .
-    if [ $? -ne 0 ]; then
-        echo "Failed to create new tar file $NEW_TAR_FILE."
-        exit 1
-    fi
-    echo "New tar file $NEW_TAR_FILE created."
-
-    # Check if the new tar file needs to be moved
-    if [ "$NEW_TAR_FILE" != "$DEST_DIR/$(basename $NEW_TAR_FILE)" ]; then
-        # Move the new tar file to the specified directory
-        mv "$NEW_TAR_FILE" "$DEST_DIR/"
-        if [ $? -ne 0 ]; then
-            echo "Failed to move $NEW_TAR_FILE to $DEST_DIR."
-            exit 1
-        fi
-        echo "New tar file moved to $DEST_DIR."
-    else
-        echo "Source and destination paths are the same. No move required."
-    fi
-
-    # Change ownership of the new tar file
-    chown ec2-user:ec2-user "$DEST_DIR/$(basename $NEW_TAR_FILE)"
-    if [ $? -ne 0 ]; then
-        echo "Failed to change ownership of $NEW_TAR_FILE."
-        exit 1
-    fi
-    echo "Ownership of the new tar file changed to ec2-user."
-
-    # Clean up workspace
-    rm -rf "$EXTRACTED_DIR"
-    if [ $? -ne 0 ]; then
-        echo "Failed to remove the extracted directory $EXTRACTED_DIR."
-        exit 1
-    fi
-    echo "Workspace cleaned up. Extracted directory $EXTRACTED_DIR removed."
+    echo "New JSON file has been copied from '/home/ec2-user/json-file/users_000001.json' to '$FILE_NAME/'."
 
 else
-    echo "JSON file '$JSON_FILE' not found in the extracted directory."
+    echo "JSON file 'users_000001.json' not found in the directory $FILE_NAME."
     exit 1
 fi
+
+# Return to the original directory
+cd ..
+if [ $? -ne 0 ]; then
+    echo "Failed to return to the original directory."
+    exit 1
+fi
+
+# Create a new .tar.gz file with the folder name and timestamp
+TIMESTAMP=$(date +"%Y%m%d%H%M%S")
+NEW_TAR_FILE="${FILE_NAME}_${TIMESTAMP}.tar.gz"
+tar -czvf "$NEW_TAR_FILE" "$FILE_NAME"
+if [ $? -ne 0 ]; then
+    echo "Failed to create new tar file $NEW_TAR_FILE."
+    exit 1
+fi
+echo "New tar file $NEW_TAR_FILE created."
+
+# Delete the folder
+rm -rf "$FILE_NAME"
+if [ $? -ne 0 ]; then
+    echo "Failed to remove the directory $FILE_NAME."
+    exit 1
+fi
+echo "Directory $FILE_NAME removed."
+
+# Check permissions (Optional: Adjust as needed)
+chown ec2-user:ec2-user "$NEW_TAR_FILE"
+if [ $? -ne 0 ]; then
+    echo "Failed to change ownership of $NEW_TAR_FILE."
+    exit 1
+fi
+echo "Ownership of $NEW_TAR_FILE changed to ec2-user."
+
+chmod 644 "$NEW_TAR_FILE"
+if [ $? -ne 0 ]; then
+    echo "Failed to set permissions on $NEW_TAR_FILE."
+    exit 1
+fi
+echo "Permissions for $NEW_TAR_FILE set to 644."
+
