@@ -13,9 +13,6 @@ else
   
   echo "Accessing container: $container_id"
 
-  # Command to execute inside the container (replace with your command)
-  command_to_run="bash"
-
-  # Execute the command inside the container
-  docker exec -it "$container_id" "$command_to_run"
+  # Execute ./env.sh inside the container
+  docker exec -it "$container_id" bash -c "cd /path/to/your/script && ./env.sh"
 fi
