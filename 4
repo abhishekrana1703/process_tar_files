@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Define constants
+JSON_FILE="users_000001.json"
+NEW_JSON_FILE_LOCATION="/home/ec2-user/json-file/users_000001.json" # Update this to the correct path of the new JSON file
+DEST_DIR="/home/ec2-user/Repo-Migration_Automation"
+
 # Search for the first .tar.gz file in the current directory
 TAR_FILE=$(find . -maxdepth 1 -name "*.tar.gz" | head -n 1)
 
@@ -8,10 +13,6 @@ if [ -z "$TAR_FILE" ]; then
     echo "No .tar.gz file found in the current directory."
     exit 1
 fi
-
-# Define the JSON file name and new JSON file location
-JSON_FILE="users_000001.json"
-NEW_JSON_FILE_LOCATION="/home/ec2-user/json-file/users_000001.json" # Update this to the correct path of the new JSON file
 
 # Extract the .tar.gz file
 tar -xzvf "$TAR_FILE"
@@ -65,21 +66,34 @@ if [ -f "$EXTRACTED_DIR/$JSON_FILE" ]; then
     fi
     echo "New tar file $NEW_TAR_FILE created."
 
+    # Check if the new tar file needs to be moved
+    if [ "$NEW_TAR_FILE" != "$DEST_DIR/$(basename $NEW_TAR_FILE)" ]; then
+        # Move the new tar file to the specified directory
+        mv "$NEW_TAR_FILE" "$DEST_DIR/"
+        if [ $? -ne 0 ]; then
+            echo "Failed to move $NEW_TAR_FILE to $DEST_DIR."
+            exit 1
+        fi
+        echo "New tar file moved to $DEST_DIR."
+    else
+        echo "Source and destination paths are the same. No move required."
+    fi
+
     # Change ownership of the new tar file
-    chown ec2-user:ec2-user "$NEW_TAR_FILE"
+    chown ec2-user:ec2-user "$DEST_DIR/$(basename $NEW_TAR_FILE)"
     if [ $? -ne 0 ]; then
         echo "Failed to change ownership of $NEW_TAR_FILE."
         exit 1
     fi
     echo "Ownership of the new tar file changed to ec2-user."
 
-    # Move the new tar file to the specified directory
-    mv "$NEW_TAR_FILE" /home/ec2-user/
+    # Clean up workspace
+    rm -rf "$EXTRACTED_DIR"
     if [ $? -ne 0 ]; then
-        echo "Failed to move $NEW_TAR_FILE to /home/ec2-user/."
+        echo "Failed to remove the extracted directory $EXTRACTED_DIR."
         exit 1
     fi
-    echo "New tar file moved to /home/ec2-user/."
+    echo "Workspace cleaned up. Extracted directory $EXTRACTED_DIR removed."
 
 else
     echo "JSON file '$JSON_FILE' not found in the extracted directory."
