@@ -1,9 +1,21 @@
 #!/bin/bash
 
-# Name of the running container
-CONTAINER_NAME="gl-exporter-container"
+# Check if any Docker container is running
+running_containers=$(docker ps -q)
 
-# Execute commands inside the running container
-docker exec $CONTAINER_NAME /bin/bash -c "./env && gl_exporter -f export.csv -o migration-archive.tar.gz"
+if [ -z "$running_containers" ]; then
+  echo "No Docker containers are currently running."
+else
+  echo "Docker containers are running."
 
-# Exit the script; container remains running
+  # Choose the first running container (you can modify this as needed)
+  container_id=$(echo "$running_containers" | head -n 1)
+  
+  echo "Accessing container: $container_id"
+
+  # Command to execute inside the container (replace with your command)
+  command_to_run="bash"
+
+  # Execute the command inside the container
+  docker exec -it "$container_id" "$command_to_run"
+fi
