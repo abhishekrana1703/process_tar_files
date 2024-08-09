@@ -1,18 +1,40 @@
 #!/bin/bash
 
-# Check if any Docker container is running
-running_containers=$(docker ps -q)
+# Variables
+GITLAB_HOST="gitlab.example.com" # Replace with your GitLab hostname
+GITLAB_USERNAME="<gitlab-username>" # Replace with your GitLab username
+GITLAB_API_PRIVATE_TOKEN="<hidden>" # Replace with your GitLab Private Token
+EXPORT_FILE="export.csv"
+OUTPUT_FILE="migration-archive.tar.gz"
+CONTAINER_NAME="github/gl-exporter" # Name of the existing Docker container
 
-if [ -z "$running_containers" ]; then
-  echo "No Docker containers are currently running."
-else
-  echo "Docker containers are running."
-
-  # Choose the first running container (you can modify this as needed)
-  container_id=$(echo "$running_containers" | head -n 1)
-  
-  echo "Accessing container: $container_id"
-
-  # Execute ./env.sh inside the container
-  docker exec -it "$container_id" bash -c "cd /path/to/your/script && ./env.sh"
+# Step 1: Start Docker container if not already running
+if [ ! "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
+    echo "Starting Docker container..."
+    docker run -d --name $CONTAINER_NAME $CONTAINER_NAME /bin/bash -c "while true; do sleep 3600; done"
 fi
+
+# Step 2: Copy export.csv into the Docker container
+echo "Copying export.csv into Docker container..."
+docker cp $EXPORT_FILE $CONTAINER_NAME:/workspace/
+
+# Step 3: Set environment variables and run export
+echo "Setting environment variables and exporting data..."
+docker exec $CONTAINER_NAME bash -c "
+export GITLAB_API_ENDPOINT=https://$GITLAB_HOST/api/v4
+export GITLAB_USERNAME=$GITLAB_USERNAME
+export GITLAB_API_PRIVATE_TOKEN=$GITLAB_API_PRIVATE_TOKEN
+cd /workspace
+gl_exporter -f $EXPORT_FILE -o $OUTPUT_FILE
+"
+
+# Step 4: Copy the file from Docker container
+echo "Copying the export file from Docker container..."
+docker cp $CONTAINER_NAME:/workspace/$OUTPUT_FILE .
+
+# Clean up
+echo "Stopping Docker container..."
+docker stop $CONTAINER_NAME
+docker rm $CONTAINER_NAME
+
+echo "Migration archive has been saved as $OUTPUT_FILE"
