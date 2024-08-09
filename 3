@@ -1,4 +1,10 @@
-docker run -d \
-  --name gl-exporter-container \
-  -v /home/ec2-user/Repo-Migration_Automation:/workspace \
-  github/gl-exporter
+docker run -dit --name my_gl_exporter -v /home/ec2-user/Repo-Migration_Automation:/path/inside/container github/gl-exporter /bin/bash
+
+
+#!/bin/bash
+
+# Script to log in to the Docker container
+
+docker exec -it my_gl_exporter /bin/bash
+
+
